@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "833376360319",
+    "project_id": "petfeeder-c167d",
+    "storage_bucket": "petfeeder-c167d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:833376360319:android:653344a3314d91ca5bac4a",
+        "android_client_info": {
+          "package_name": "com.example.petfeeder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC7LY7cGR2OJg25zBNbL__L2jbNatY60lo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
