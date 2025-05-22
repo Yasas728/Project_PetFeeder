@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Schedule
@@ -28,7 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontWeight
-import com.example.petfeeder.pages.CameraPage
+import com.example.petfeeder.pages.MediaPage
 import com.example.petfeeder.pages.HomePage
 import com.example.petfeeder.pages.NotificationPage
 import com.example.petfeeder.pages.SchedulePage
@@ -37,6 +38,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petfeeder.data.ScheduleViewModel
 import com.example.petfeeder.data.OtherVariablesViewModel
+import com.example.petfeeder.pages.MediaPage
 import com.example.petfeeder.pages.SettingsSchedulePage
 
 
@@ -59,10 +61,10 @@ fun T_B_Navigation(modifier: Modifier = Modifier) {
             topLabel = "Pet Feeder"
         ),
         NavItem(
-            label = "Camera",
-            icon = Icons.Outlined.PhotoCamera,
+            label = "Media",
+            icon = Icons.Outlined.LibraryMusic,
             badgeCount = 0,
-            topLabel = "Live Camera"
+            topLabel = "Media Center"
         ),
         NavItem(
             label = "Schedule",
@@ -160,7 +162,7 @@ fun BottomContentScreen(
 ) {
     when(selectedIndex) {
         0 -> HomePage(viewModel = otherVariablesViewModel, modifier = modifier)
-        1 -> CameraPage()
+        1 -> MediaPage()
         2 -> SchedulePage(viewModel = scheduleViewModel)
         3 -> NotificationPage()
     }
