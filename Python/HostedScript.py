@@ -51,7 +51,7 @@ class UpdateFeedNow:
     @staticmethod
     def firebase_upload():
         """Upload feed command to Firebase"""
-        url = "https://petfeederdatabase-bd940-default-rtdb.asia-southeast1.firebasedatabase.app/Variables.json"
+        url = "https://petfeederdatabase-bd940-default-rtdb.asia-southeast1.firebasedatabase.app/GetVariables.json"
         data = {"FeedNow": True}
 
         try:

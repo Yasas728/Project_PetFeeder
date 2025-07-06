@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -43,16 +41,37 @@ android {
 }
 
 dependencies {
-
+    // Core Android dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.firebase.database)
+    implementation(libs.androidx.material.icons.extended)
+
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+
+    // Activity and ViewModel Compose
+    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+    // Firebase BOM (Bill of Materials) - This manages all Firebase versions
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+
+    // Image loading with Coil
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Test dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,30 +79,6 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.material3)
-    implementation(platform(libs.firebase.bom))
-    implementation (platform("com.google.firebase:firebase-bom:33.12.0")) // ✅ Use BOM to align versions
 
-    implementation("com.google.firebase:firebase-database")
-    implementation("com.google.firebase:firebase-database-ktx")
-    implementation("com.google.firebase:firebase-database:21.0.0")
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-
-    implementation("androidx.compose.ui:ui:<version>")
-    implementation("androidx.compose.material3:material3:<version>")
-    implementation("androidx.compose.foundation:foundation:<version>")
-
-    val nav_version = "2.8.9"
-    implementation("androidx.navigation:navigation-compose:$nav_version")
-
-    implementation("com.google.firebase:firebase-storage:20.3.0")
-    implementation("com.google.firebase:firebase-auth:22.3.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.compose.material3:material3:1.1.2")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
-    implementation("io.coil-kt:coil-compose:2.4.0")
-
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }

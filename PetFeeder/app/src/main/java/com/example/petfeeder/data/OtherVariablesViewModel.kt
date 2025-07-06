@@ -29,13 +29,16 @@ class OtherVariablesViewModel : ViewModel() {
 
     init {
         try {
-            getVariables()
+            Variables()
+            FeedCommand()
+            FoodPortion()
+            PutVariables()
         } catch (e: Exception) {
             Log.e(TAG, "Error in init block", e)
         }
     }
 
-    private fun getVariables() {
+    private fun Variables() {
         try {
             if (database == null) {
                 Log.e(TAG, "Cannot get variables: database is null")
@@ -44,26 +47,21 @@ class OtherVariablesViewModel : ViewModel() {
 
             val variablesRef = database.getReference("Variables")
 
+
             // Use ValueEventListener to listen for real-time updates
             variablesRef.addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     try {
                         Log.d(TAG, "Got Firebase variables data")
 
-                        val feedNowValue = snapshot.child("FeedNow").getValue(Boolean::class.java) ?: false
-                        val mainFoodLevelValue = snapshot.child("MainFoodLevel").getValue(Double::class.java) ?: 0.78
-                        val portionSizeValue = snapshot.child("PotionSize").getValue(Int::class.java) ?: 1
                         val intruderAlertValue = snapshot.child("IntruderAlert").getValue(Boolean::class.java) ?: false
                         val nextFeedingValue = snapshot.child("NextFeeding").getValue(String::class.java) ?: ""
 
                         // Update UI state
-                        feedNow.value = feedNowValue
-                        mainFoodLevel.value = mainFoodLevelValue
-                        portionSize.value = portionSizeValue
                         intruderAlert.value = intruderAlertValue
                         nextFeeding.value = nextFeedingValue
 
-                        Log.d(TAG, "Updated variables: FeedNow=$feedNowValue, FoodLevel=$mainFoodLevelValue, PortionSize=$portionSizeValue,IntruderAlert=$intruderAlertValue")
+                        Log.d(TAG, "Updated variables: IntruderAlert=$intruderAlertValue")
                     } catch (e: Exception) {
                         Log.e(TAG, "Error processing Firebase results", e)
                     }
@@ -78,6 +76,117 @@ class OtherVariablesViewModel : ViewModel() {
         }
     }
 
+    private fun PutVariables() {
+        try {
+            if (database == null) {
+                Log.e(TAG, "Cannot get variables: database is null")
+                return
+            }
+
+            val variablesRef = database.getReference("PutVariables")
+
+
+            // Use ValueEventListener to listen for real-time updates
+            variablesRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        Log.d(TAG, "Got Firebase variables data")
+
+                        val mainFoodLevelValue = snapshot.child("MainFoodLevel").getValue(Double::class.java) ?: 0.78
+
+                        // Update UI state
+                        mainFoodLevel.value = mainFoodLevelValue
+
+                        Log.d(TAG, "Updated variables: FoodLevel=$mainFoodLevelValue")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing Firebase results", e)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Firebase operation cancelled", error.toException())
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in getVariables method", e)
+        }
+    }
+
+    private fun FoodPortion() {
+        try {
+            if (database == null) {
+                Log.e(TAG, "Cannot get variables: database is null")
+                return
+            }
+
+            val variablesRef = database.getReference("FoodPortion")
+
+
+            // Use ValueEventListener to listen for real-time updates
+            variablesRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        Log.d(TAG, "Got Firebase variables data")
+
+                        val portionSizeValue = snapshot.child("PotionSize").getValue(Int::class.java) ?: 1
+
+                        // Update UI state
+                        portionSize.value = portionSizeValue
+
+                        Log.d(TAG, "Updated variables: PortionSize=$portionSizeValue")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing Firebase results", e)
+                    }
+                }
+
+
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Firebase operation cancelled", error.toException())
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in FoodPortion method", e)
+        }
+    }
+
+    private fun FeedCommand() {
+        try {
+            if (database == null) {
+                Log.e(TAG, "Cannot get variables: database is null")
+                return
+            }
+
+            val variablesRef = database.getReference("FeedCommand")
+
+
+            // Use ValueEventListener to listen for real-time updates
+            variablesRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        Log.d(TAG, "Got Firebase variables data")
+
+                        val feedNowValue = snapshot.child("FeedNow").getValue(Boolean::class.java) ?: false
+
+                        // Update UI state
+                        feedNow.value = feedNowValue
+
+                        Log.d(TAG, "Updated variables: FeedNow=$feedNowValue")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing Firebase results", e)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Firebase operation cancelled", error.toException())
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in getVariables method", e)
+        }
+    }
+
+
     fun triggerFeedNow(portionSize: Int) {
         try {
             if (database == null) {
@@ -86,22 +195,13 @@ class OtherVariablesViewModel : ViewModel() {
             }
 
             // Update Firebase
-            database.getReference("Variables").child("FeedNow").setValue(true)
+            database.getReference("FeedCommand").child("FeedNow").setValue(true)
                 .addOnSuccessListener {
                     Log.d(TAG, "Feed now triggered successfully")
 
-                    // Update portion size
-                    database.getReference("Variables").child("PotionSize").setValue(portionSize)
-                        .addOnSuccessListener {
-                            Log.d(TAG, "Portion size updated to $portionSize")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.e(TAG, "Failed to update portion size", e)
-                        }
-
                     // Reset the feed now flag after a short delay (simulating hardware response)
                     android.os.Handler().postDelayed({
-                        database.getReference("Variables").child("FeedNow").setValue(false)
+                        database.getReference("FeedCommand").child("FeedNow").setValue(false)
                             .addOnSuccessListener {
                                 Log.d(TAG, "Feed now reset successfully")
                             }
@@ -127,7 +227,7 @@ class OtherVariablesViewModel : ViewModel() {
             }
 
             // Update Firebase
-            database.getReference("Variables").child("PotionSize").setValue(size)
+            database.getReference("FoodPortion").child("PotionSize").setValue(size)
                 .addOnSuccessListener {
                     Log.d(TAG, "Portion size updated to $size")
                 }
