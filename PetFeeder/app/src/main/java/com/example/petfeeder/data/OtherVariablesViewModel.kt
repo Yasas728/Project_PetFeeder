@@ -128,7 +128,7 @@ class OtherVariablesViewModel : ViewModel() {
                     try {
                         Log.d(TAG, "Got Firebase variables data")
 
-                        val portionSizeValue = snapshot.child("PotionSize").getValue(Int::class.java) ?: 1
+                        val portionSizeValue = snapshot.child("PortionSize").getValue(Int::class.java) ?: 1
 
                         // Update UI state
                         portionSize.value = portionSizeValue
@@ -227,7 +227,7 @@ class OtherVariablesViewModel : ViewModel() {
             }
 
             // Update Firebase
-            database.getReference("FoodPortion").child("PotionSize").setValue(size)
+            database.getReference("FoodPortion").child("PortionSize").setValue(size)
                 .addOnSuccessListener {
                     Log.d(TAG, "Portion size updated to $size")
                 }

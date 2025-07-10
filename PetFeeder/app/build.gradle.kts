@@ -80,5 +80,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("io.coil-kt:coil-compose:2.7.0")
+    // Work Manager for scheduled notifications (optional)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

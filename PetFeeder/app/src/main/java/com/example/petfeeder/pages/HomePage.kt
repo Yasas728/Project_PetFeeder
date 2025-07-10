@@ -27,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petfeeder.MainActivity
+import com.example.petfeeder.data.FirebaseIntruderRepository
 import com.example.petfeeder.data.OtherVariablesViewModel
 import com.example.petfeeder.data.ScheduleViewModel
 import com.example.petfeeder.ui.theme.Purple40
@@ -39,6 +41,9 @@ fun HomePage(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
+    val firebaseRepository: FirebaseIntruderRepository = viewModel()
+
 
     // Observe variables from ViewModel
     val foodLevel by viewModel.mainFoodLevel

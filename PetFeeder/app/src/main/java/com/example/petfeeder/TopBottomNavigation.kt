@@ -38,7 +38,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.petfeeder.data.ScheduleViewModel
 import com.example.petfeeder.data.OtherVariablesViewModel
-import com.example.petfeeder.pages.MediaPage
 import com.example.petfeeder.pages.SettingsSchedulePage
 
 
