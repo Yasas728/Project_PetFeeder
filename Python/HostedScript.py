@@ -1,240 +1,193 @@
-import schedule
-from datetime import datetime, timedelta
-import time
 import requests
+from datetime import datetime, timedelta
 import pytz
+import time
+from pprint import pprint
 
 
-
-class UpdateFeedNow:
-
-
-    def __init__(self, feeder=None):
-        # Create feeder instance if not provided
-        if feeder is None:
-            self.feeder = FeederSchedule()
-        else:
-            self.feeder = feeder
-
-        # Get initial next feeding time
-        next_feeding = self.feeder.get_next_feeding_time()
-        print(next_feeding)
-
-        if next_feeding:
-            print(f"Next feeding at {next_feeding['time']} on {next_feeding['day']}")
-            print(f"In: {FeederSchedule.format_time_until(next_feeding['time_until'])}")
-        else:
-            print("No upcoming feeding scheduled.")
-
-        # Start the scheduling loop
-        self.run_scheduler()
-
-    def run_scheduler(self):
-        """Main scheduling loop"""
-        while True:
-            # Clear previous schedules to avoid duplicates
-            schedule.clear()
-
-            # Get current next feeding time
-            next_feeding = self.feeder.get_next_feeding_time()
-
-            if next_feeding:
-                # Schedule the feeding
-                schedule.every().day.at(next_feeding['time']).do(self.firebase_upload)
-                self.nextFeedingTime_update(next_feeding)
-                print(f"Scheduled feeding for {next_feeding['time']} on {next_feeding['day']}")
-
-            # Run pending schedules
-            schedule.run_pending()
-            time.sleep(30)
-
-    @staticmethod
-    def firebase_upload():
-        """Upload feed command to Firebase"""
-        url = "https://petfeederdatabase-bd940-default-rtdb.asia-southeast1.firebasedatabase.app/GetVariables.json"
-        data = {"FeedNow": True}
-
-        try:
-            response = requests.patch(url, json=data)
-
-            # Check result
-            if response.status_code == 200:
-                print("Feed command sent successfully!")
-                print(f"Response: {response.json()}")
-            else:
-                print(f"Failed to send feed command. Status code: {response.status_code}")
-                print(f"Response: {response.text}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Network error occurred: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-
-
-    @staticmethod
-    def nextFeedingTime_update(next_feeding):
-        url = "https://petfeederdatabase-bd940-default-rtdb.asia-southeast1.firebasedatabase.app/Variables.json"
-        tz = pytz.timezone("Asia/Colombo")
-
-        today = datetime.now(tz).strftime('%a')
-        tomorrow = datetime.now(tz) + timedelta(days=1)
-        day_tomorrow = tomorrow.strftime('%a')
-
-        time_12 = datetime.strptime(next_feeding['time'], "%H:%M").strftime("%I:%M %p")
-
-
-        if today == next_feeding['day']:
-            day_name = "Today"
-        elif day_tomorrow == next_feeding['day']:
-            day_name = "Tomorrow"
-        else:
-            day_name = next_feeding['day']
-
-
-        text = {"NextFeeding": f"{day_name} at {time_12}"}
-        try:
-            response = requests.patch(url, json=text)
-
-            # Check result
-            if response.status_code == 200:
-                print("Next Feeding time updated successfully!")
-                print(f"Response: {response.json()}")
-            else:
-                print(f"Failed to send feed command. Status code: {response.status_code}")
-                print(f"Response: {response.text}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"Network error occurred: {e}")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-
-class FeederSchedule:
+class PetFeeder:
     def __init__(self):
-        self.url = "https://petfeederdatabase-bd940-default-rtdb.asia-southeast1.firebasedatabase.app/Schedules.json"
-        self.schedule_data = None
-        self.variables = None
+        """Initialize the pet feeder with timezone and Firebase URL"""
+        self.tz = pytz.timezone("Asia/Colombo")
+        self.base_url = "https://petfeederdatabase-bd940-default-rtdb.asia-southeast1.firebasedatabase.app"
+        self.last_feed_time = None
+        self.startup_test()
 
-    def get_schedule_data(self):
+    def startup_test(self):
+        """Verify all systems are operational before starting"""
+        print("\n" + "=" * 50)
+        print(f"🚀 Starting Pet Feeder at {datetime.now(self.tz).strftime('%Y-%m-%d %H:%M:%S')}")
+        print("=" * 50)
+
+        if not self._test_firebase_connection():
+            raise ConnectionError("Failed to connect to Firebase")
+
+        print("\n✅ System checks passed. Starting scheduler...")
+
+    def _test_firebase_connection(self):
+        """Test Firebase read/write capabilities"""
+        print("\n🔌 Testing Firebase connection...")
         try:
-            response = requests.get(self.url)
-            if response.status_code == 200:
-                self.schedule_data = response.json()
-                return self.schedule_data
-            else:
-                print(f"Error: {response.status_code}")
-                return None
+            # Test read access
+            status_url = f"{self.base_url}/.json"
+            response = requests.get(status_url, timeout=5)
+            print(f"📡 Database read: {'✅' if response.status_code == 200 else '❌'} ({response.status_code})")
+
+            # Test write access
+            test_data = {"ConnectionTest": datetime.now(self.tz).isoformat()}
+            response = requests.patch(status_url, json=test_data, timeout=5)
+            print(f"✏️ Database write: {'✅' if response.status_code == 200 else '❌'} ({response.status_code})")
+
+            return response.status_code == 200
         except Exception as e:
-            print(f"Error retrieving data: {e}")
+            print(f"❌ Connection failed: {str(e)}")
+            return False
+
+    def run(self):
+        """Main scheduling loop"""
+        print("\n🔄 Starting scheduler...")
+
+        while True:
+            try:
+                now = datetime.now(self.tz)
+                next_feeding = self._get_next_feeding_time()
+
+                if next_feeding:
+                    self._update_display(next_feeding)
+                    self._check_feeding_time(next_feeding, now)
+
+                time.sleep(5)  # Check every 5 seconds
+
+            except Exception as e:
+                print(f"⚠️ Scheduler error: {str(e)}")
+                time.sleep(10)  # Wait longer after errors
+
+    def _get_next_feeding_time(self):
+        """Calculate the next scheduled feeding time"""
+        try:
+            response = requests.get(f"{self.base_url}/Schedules.json", timeout=5)
+            if response.status_code != 200:
+                return None
+
+            schedules = response.json()
+            now = datetime.now(self.tz)
+            next_feeding = None
+
+            for schedule_id, schedule in schedules.items():
+                if not schedule.get('enable', False):
+                    continue
+
+                for day_offset in range(7):  # Check next 7 days
+                    check_date = now + timedelta(days=day_offset)
+                    weekday = check_date.strftime('%a').lower()
+
+                    if schedule.get(weekday, False):
+                        feed_time = check_date.replace(
+                            hour=schedule['timeHour'],
+                            minute=schedule['timeMinute'],
+                            second=0,
+                            microsecond=0
+                        )
+
+                        if feed_time > now and (next_feeding is None or feed_time < next_feeding['datetime']):
+                            next_feeding = {
+                                'datetime': feed_time,
+                                'time': f"{schedule['timeHour']:02d}:{schedule['timeMinute']:02d}",
+                                'day': weekday.capitalize()
+                            }
+
+            return next_feeding
+
+        except Exception as e:
+            print(f"⚠️ Schedule loading error: {str(e)}")
             return None
 
-    def extract_schedule_variables(self):
-        if not self.schedule_data:
-            return None
+    def _check_feeding_time(self, next_feeding, current_time):
+        """Check if it's time to trigger feeding"""
+        time_until = (next_feeding['datetime'] - current_time).total_seconds()
 
-        variables = {}
-
-        if isinstance(self.schedule_data, list):
-            for i, schedule_info in enumerate(self.schedule_data):
-                if schedule_info is not None:
-                    variables[i] = self._extract_fields(schedule_info)
+        if 0 <= time_until <= 30:  # 30-second window
+            if self.last_feed_time != next_feeding['datetime']:
+                print(f"\n⏰ Feeding time detected: {next_feeding['time']}")
+                self._trigger_feeding()
+                self.last_feed_time = next_feeding['datetime']
+            else:
+                print(f"⏳ Already fed at {next_feeding['time']}")
         else:
-            for schedule_id, schedule_info in self.schedule_data.items():
-                variables[schedule_id] = self._extract_fields(schedule_info)
+            mins_until = int(time_until // 60)
+            if mins_until > 0:
+                print(f"\n⏳ Next feeding: {next_feeding['day']} at {next_feeding['time']} (in {mins_until} mins)")
+            else:
+                print(f"\n⏳ Next feeding: {next_feeding['day']} at {next_feeding['time']} (in {int(time_until)} secs)")
 
-        self.variables = variables
-        return variables
+    def _trigger_feeding(self):
+        """Send feed command to Firebase"""
+        print("\n🎯 Triggering feeding sequence...")
+        url = f"{self.base_url}/FeedCommand.json"
 
-    def _extract_fields(self, schedule_info):
-        return {
-            'enable': schedule_info.get('enable', False),
-            'fri': schedule_info.get('fri', False),
-            'id': schedule_info.get('id', 0),
-            'mon': schedule_info.get('mon', False),
-            'sat': schedule_info.get('sat', False),
-            'sun': schedule_info.get('sun', False),
-            'thu': schedule_info.get('thu', False),
-            'timeHour': schedule_info.get('timeHour', 0),
-            'timeMinute': schedule_info.get('timeMinute', 0),
-            'tue': schedule_info.get('tue', False),
-            'wed': schedule_info.get('wed', False)
-        }
+        try:
+            # Verify current state
+            current_state = requests.get(url, timeout=3).json()
+            print(f"🔍 Pre-feed status: FeedNow={current_state.get('FeedNow')}")
 
-    def get_next_schedule_time(self):
+            # Send feed command
+            response = requests.patch(url, json={"FeedNow": True}, timeout=5)
+            print(f"📡 Command sent: {'✅' if response.status_code == 200 else '❌'} ({response.status_code})")
 
-        tz = pytz.timezone("Asia/Colombo")
+            # Verify update
+            updated_state = requests.get(url, timeout=3).json()
+            print(f"✅ Post-feed status: FeedNow={updated_state.get('FeedNow')}")
+            
+            self.buzzerControl()
 
-        if not self.variables:
-            return None
+            return response.status_code == 200
 
-        now = datetime.now(tz)
-        day_mapping = {
-            0: 'mon', 1: 'tue', 2: 'wed', 3: 'thu',
-            4: 'fri', 5: 'sat', 6: 'sun'
-        }
+        except Exception as e:
+            print(f"❌ Feeding command failed: {str(e)}")
+            return False
 
-        next_schedules = []
+    def _update_display(self, next_feeding):
+        """Update the NextFeeding display in Firebase"""
+        now = datetime.now(self.tz)
+        time_str = datetime.strptime(next_feeding['time'], "%H:%M").strftime("%I:%M %p")
 
-        for schedule_id, schedule in self.variables.items():
-            if not schedule['enable']:
-                continue
-
-            for day_offset in range(7):
-                check_date = now + timedelta(days=day_offset)
-                weekday_key = day_mapping[check_date.weekday()]
-
-                if schedule[weekday_key]:
-                    schedule_datetime = check_date.replace(
-                        hour=schedule['timeHour'],
-                        minute=schedule['timeMinute'],
-                        second=0,
-                        microsecond=0
-                    )
-                    if schedule_datetime > now:
-                        next_schedules.append({
-                            'schedule_id': schedule_id,
-                            'datetime': schedule_datetime,
-                            'day': weekday_key.capitalize(),
-                            'time': f"{schedule['timeHour']:02d}:{schedule['timeMinute']:02d}",
-                            'time_until': schedule_datetime - now
-                        })
-
-        next_schedules.sort(key=lambda x: x['datetime'])
-        return next_schedules
-
-    def get_next_feeding_time(self):
-        self.get_schedule_data()
-        self.extract_schedule_variables()
-        schedules = self.get_next_schedule_time()
-        if schedules:
-            return schedules[0]
-        return None
-
-    @staticmethod
-    def format_time_until(time_delta):
-        total_seconds = int(time_delta.total_seconds())
-        days = total_seconds // 86400
-        hours = (total_seconds % 86400) // 3600
-        minutes = (total_seconds % 3600) // 60
-
-        if days > 0:
-            return f"{days} day(s), {hours} hour(s), {minutes} minute(s)"
-        elif hours > 0:
-            return f"{hours} hour(s), {minutes} minute(s)"
+        if now.strftime('%a') == next_feeding['day']:
+            display_text = f"Today at {time_str}"
+        elif (now + timedelta(days=1)).strftime('%a') == next_feeding['day']:
+            display_text = f"Tomorrow at {time_str}"
         else:
-            return f"{minutes} minute(s)"
+            display_text = f"{next_feeding['day']} at {time_str}"
 
+        try:
+            response = requests.patch(
+                f"{self.base_url}/Variables.json",
+                json={"NextFeeding": display_text},
+                timeout=3
+            )
+            if response.status_code != 200:
+                print(f"⚠️ Display update failed (Status: {response.status_code})")
+        except Exception as e:
+            print(f"⚠️ Display update error: {str(e)}")
 
-# Create and run the feeder updater
+    def buzzerControl(self):
+        time.sleep(30)
+        url = f"{self.base_url}/Buzzer.json"
+
+        response = requests.patch(url, json={"Enable": True}, timeout=5)
+        print(f"Buzzer TRUE sent: {'✅' if response.status_code == 200 else '❌'} ({response.status_code})")
+        
+        time.sleep(30)
+
+        response = requests.patch(url, json={"Enable": False}, timeout=5)
+        print(f"Buzzer FALSE sent: {'✅' if response.status_code == 200 else '❌'} ({response.status_code})")
+        
+        
 if __name__ == "__main__":
-
-    tz = pytz.timezone("Asia/Colombo")
-
-    now = datetime.now(tz)
-    print("Timeeeeee", now)
-
+    print("🐾 Smart Pet Feeder Controller 🐾")
     try:
-        updater = UpdateFeedNow()
+        feeder = PetFeeder()
+        feeder.run()
     except KeyboardInterrupt:
-        print("\nFeeder scheduler stopped by user.")
+        print("\n🛑 Scheduler stopped by user")
     except Exception as e:
-        print(f"Error starting feeder scheduler: {e}")
+        print(f"💥 Fatal error: {str(e)}")

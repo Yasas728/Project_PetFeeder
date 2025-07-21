@@ -1,7 +1,6 @@
 package com.example.petfeeder.data
 
 import android.app.Application
-import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -118,7 +117,8 @@ class FirebaseIntruderRepository(application: Application) : AndroidViewModel(ap
             Log.d(TAG, "Triggering intruder notification")
             notificationService.showIntruderAlert(time.value)
 
-            falseIsHereInDatabase()
+            // Removed the problematic line that was trying to call UI from ViewModel
+            // The UI dialog will be handled by the NotificationPage composable
         }
 
         // Update previous state
@@ -148,12 +148,13 @@ class FirebaseIntruderRepository(application: Application) : AndroidViewModel(ap
             database.getReference("Intruder").child("IsHere").setValue(false)
                 .addOnSuccessListener {
                     isHere.value = false
+                    Log.d(TAG, "Successfully updated IsHere to false")
                 }
                 .addOnFailureListener { e ->
-                    Log.e(TAG, "Failed to update ishere", e)
+                    Log.e(TAG, "Failed to update IsHere", e)
                 }
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating ishere alert in database", e)
+            Log.e(TAG, "Error updating IsHere in database", e)
         }
     }
 }

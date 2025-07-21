@@ -44,6 +44,8 @@ fun HomePage(
 
     val firebaseRepository: FirebaseIntruderRepository = viewModel()
 
+    val isHere by firebaseRepository.isHere
+    val time by firebaseRepository.time
 
     // Observe variables from ViewModel
     val foodLevel by viewModel.mainFoodLevel
@@ -358,6 +360,12 @@ fun HomePage(
             }
         }
     }
+    IntruderAlertPopUp(
+        isHere = isHere,
+        intruderAlert = intruderAlert,
+        time = time,
+        onDismiss = { firebaseRepository.falseIsHereInDatabase() }
+    )
 }
 
 // Helper function to update portion size in ViewModel
@@ -371,5 +379,57 @@ private fun updatePortionSize(viewModel: OtherVariablesViewModel, size: Int) {
         }
     } catch (e: Exception) {
         android.util.Log.e("HomePage", "Error updating portion size", e)
+    }
+}
+
+@Composable
+fun IntruderAlertPopUp(
+    isHere: Boolean,
+    intruderAlert: Boolean,
+    time: String,
+    onDismiss: () -> Unit
+) {
+    if (isHere && intruderAlert) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    text = "Intruder Alert!",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "An intruder has been detected at your pet feeder!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (time.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Time: $time",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = onDismiss
+                ) {
+                    Text("Acknowledge")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            titleContentColor = MaterialTheme.colorScheme.onErrorContainer,
+            textContentColor = MaterialTheme.colorScheme.onErrorContainer
+        )
     }
 }
